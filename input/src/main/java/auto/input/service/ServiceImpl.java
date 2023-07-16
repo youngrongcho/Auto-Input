@@ -1,73 +1,83 @@
 package auto.input.service;
 
+import auto.input.dto.Dto;
 import auto.input.entity.ReservationDate;
+import auto.input.repository.Repository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.Calendar;
+import java.util.Locale;
 
 @org.springframework.stereotype.Service
 @Transactional
 @Slf4j
+@RequiredArgsConstructor
 public class ServiceImpl implements Service {
+    private final Repository repository;
+
     @Override
-    public void input() throws IOException {
-        //DB에 입력해야하는 <연도, 월, 시작 시간, 끝 시간, rdType>을 콘솔로 받는다.
-        //TODO 각 메서드 유효성 검사 추가하기
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        int year = getYear(br);
-        int month = getMonth(br);
-        int startHour = getStartHour(br);
-        int endHour = getEndHour(br);
-        String rdType = getType(br);
+    public void input(Dto dto) {
+        int year = dto.getYear();
+        int month = dto.getMonth();
+        int startHour = dto.getStartHour();
+        int endHour = dto.getEndHour();
+        String rdType = dto.getRdType();
+        int lastDay = getLastDay(year, month);
 
-        //시작 시간부터 종료 시간까지 for문 돌면서 repository insert.
-        for (int i = startHour; i <= endHour; i++) {
-            //entity 생성
-            ReservationDate reservationDate;
+        //각 날짜마다 시작 시간부터 종료 시간까지 for문 돌면서 repository insert.
+        for (int i = 1; i <= lastDay; i++) {
+            for (int j = startHour; j <= endHour; j++) {
+                //entity 생성
+                ReservationDate reservationDate = ReservationDate.builder().build();
+                reservationDate.setRdTypeCd(rdType);
+                LocalDateTime localDateTime = LocalDateTime.of(year, month, i, 0, 0, 0);
+                String date = makeDate(localDateTime);
+                reservationDate.setDate(date);
 
-            //해당 연도-월의 모든 날짜에 대하여, 모든 시간을 input
-
-            //주말이면 상태 ban
-            //영업 종료시간이어도 상태 ban
-            //점심시간이면 상태 lunch
+                reservationDate.setHour(j);
+                //주말이면 상태 ban
+                String day = getDay(localDateTime);
+                if (day.equals("토요일") || day.equals("일요일")) {
+                    reservationDate.setRdState(ReservationDate.State.BAN);
+                } else {
+                    //점심시간이면 상태 lunch
+                    int lunchTime = 12;
+                    if (j == lunchTime) {
+                        reservationDate.setRdState(ReservationDate.State.LUNCH);
+                    }
+                    //영업 종료시간이면 상태 ban
+                    else if (j == endHour) {
+                        reservationDate.setRdState(ReservationDate.State.BAN);
+                    }
+                    else {
+                        reservationDate.setRdState(ReservationDate.State.NORMAL);
+                    }
+                }
+                repository.save(reservationDate);
+            }
         }
     }
 
-    private static String getType(BufferedReader br) throws IOException {
-        System.out.println("[🌽] 서비스 타입(rdType)을 입력해주세요. ex) SKINCARE ");
-        String rdType = br.readLine().toUpperCase();
-        System.out.printf("[🍀] 입력하신 서비스 타입 : %s \n\n", rdType);
-        return rdType;
+    private static String getDay(LocalDateTime localDateTime) {
+        DayOfWeek dayOfWeek = localDateTime.getDayOfWeek();
+        System.out.println(dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN));
+        return dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN);
     }
 
-    private static int getEndHour(BufferedReader br) throws IOException {
-        System.out.println("[🌽] 종료 시간(endHour)을 입력해주세요. ex) 18 ");
-        int endHour = Integer.parseInt(br.readLine());
-        System.out.printf("[🍀] 입력하신 종료 시간 : %s시 \n\n", endHour);
-        return endHour;
+    private static String makeDate(LocalDateTime localDateTime) {
+        String date = localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        return date;
     }
 
-    private static int getStartHour(BufferedReader br) throws IOException {
-        System.out.println("[🌽] 시작 시간(startHour)을 입력해주세요. ex) 12 ");
-        int startHour = Integer.parseInt(br.readLine());
-        System.out.printf("[🍀] 입력하신 시작 시간 : %s시 \n\n", startHour);
-        return startHour;
-    }
-
-    private static int getMonth(BufferedReader br) throws IOException {
-        System.out.println("[🌽] 월(month)을 입력해주세요. ex) 7 ");
-        int month = Integer.parseInt(br.readLine());
-        System.out.printf("[🍀] 입력하신 월 : %s월 \n\n", month);
-        return month;
-    }
-
-    private static int getYear(BufferedReader br) throws IOException {
-        System.out.println("[🌽] 연도(year)를 입력해주세요. ex) 2023 ");
-        int year = Integer.parseInt(br.readLine());
-        System.out.printf("[🍀] 입력하신 연도 : %s년 \n\n", year);
-        return year;
+    private static int getLastDay(int year, int month) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(year, month - 1, 1);
+        return calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
     }
 }
