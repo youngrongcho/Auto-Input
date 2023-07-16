@@ -41,9 +41,9 @@ public class ServiceImpl implements Service {
                 reservationDate.setDate(date);
 
                 reservationDate.setHour(j);
-                //주말이면 상태 ban
+                //주말이거나 공휴일이면 상태 ban
                 String day = getDay(localDateTime);
-                if (day.equals("토요일") || day.equals("일요일")) {
+                if (day.equals("토요일") || day.equals("일요일") || dto.getHolidays().contains(date.substring(0,10))) {
                     reservationDate.setRdState(ReservationDate.State.BAN);
                 } else {
                     //점심시간이면 상태 lunch
