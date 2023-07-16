@@ -6,6 +6,7 @@ spring:
     password:
   jpa:
     hibernate:
+      ddl-auto: none
     show-sql: true      # (2) SQL ?? ??
     properties:
       hibernate:
