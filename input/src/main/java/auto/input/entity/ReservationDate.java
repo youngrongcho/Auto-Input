@@ -2,10 +2,7 @@ package auto.input.entity;
 
 import lombok.*;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Getter
 @Setter
@@ -15,10 +12,11 @@ import javax.persistence.Id;
 @Entity
 public class ReservationDate {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer rdSeq;
     private String date;
     private int hour;
+    @Enumerated(EnumType.STRING)
     private State rdState = State.NORMAL;
     private String rdTypeCd;
 
